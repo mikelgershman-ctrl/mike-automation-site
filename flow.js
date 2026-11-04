@@ -2,7 +2,7 @@
 // 1. The page background (.flow-canvas): a quiet dotted grid with request chips drifting across.
 // 2. The AI panel (.flow-panel): requests (WhatsApp, mail, website form, files) fly into an AI hub
 //    that reads each one and sorts it into the right tray: leads, documents, quotes.
-// Reduced motion: both draw one still frame.
+// Reduced motion keeps the background still; the panel plays (it has its own pause button).
 (() => {
   const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const ACCENT = "93, 240, 168";
@@ -251,18 +251,17 @@
       ctx.fillText("קורא וממיין", h.x, h.y + (narrow() ? 15 : 19));
     }
 
-    if (still) {
-      for (let i = 0; i < 4; i++) { spawn(); tokens[i].t = 0.2 + i * 0.17; }
-      const redraw = () => { s.resize(); draw(0); };
-      redraw();
-      addEventListener("resize", redraw);
-      return null;
-    }
-    let visible = false;
+    let visible = false, paused = false;
     new IntersectionObserver(([e]) => { visible = e.isIntersecting; }).observe(box);
+    const btn = box.querySelector(".as-flow-pause");
+    if (btn) btn.addEventListener("click", () => {
+      paused = !paused;
+      btn.setAttribute("aria-pressed", String(paused));
+      btn.textContent = paused ? "הפעל" : "השהה";
+    });
     for (let i = 0; i < 3; i++) { spawn(); tokens[i].t = 0.15 + i * 0.25; }
     return (dt) => {
-      if (!visible) return;
+      if (!visible || paused) return;
       if (box.clientWidth !== s.w || box.clientHeight !== s.h) s.resize();
       spin += dt * 0.9;
       dash += dt * 22;
@@ -274,11 +273,13 @@
 
   const loops = [];
   const bg = document.querySelector(".flow-canvas");
-  if (bg && bg.getContext) loops.push(background(bg));
+  if (bg && bg.getContext) {
+    const step = background(bg);
+    if (still) step(0);
+    else loops.push(step);
+  }
   const pn = document.querySelector(".flow-panel");
-  if (pn && pn.getContext) { const step = panel(pn); if (step) loops.push(step); }
-
-  if (still) { for (const step of loops) step(0); return; }
+  if (pn && pn.getContext) loops.push(panel(pn));
   let last = performance.now();
   const frame = (now) => {
     requestAnimationFrame(frame);
