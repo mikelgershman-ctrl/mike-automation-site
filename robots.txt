@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://mikelgershman-ctrl.github.io/mike-automation-site/sitemap.xml
