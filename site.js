@@ -1,24 +1,58 @@
 
 (() => {
-  const wa = "972546980558";
+  const waNumber = "972546980558";
   document.querySelectorAll("button.landing-cta").forEach((b) => {
     const d = b.nextElementSibling;
     if (d && d.tagName === "DIALOG") b.addEventListener("click", () => d.showModal());
   });
   document.querySelectorAll("dialog button[aria-label='סגירה']").forEach((b) => b.addEventListener("click", () => b.closest("dialog").close()));
-  document.querySelectorAll("dialog form").forEach((f) => f.addEventListener("submit", (e) => {
+  // Every submission is emailed to Michael through FormSubmit (free, no server needed).
+  const endpoint = "https://formsubmit.co/ajax/mikelgershman@gmail.com";
+  document.querySelectorAll("dialog form").forEach((f) => f.addEventListener("submit", async (e) => {
     e.preventDefault();
     const v = (n) => (f.elements[n] && f.elements[n].value || "").trim();
     if (v("website")) return;
+    const btn = f.querySelector("button[type=submit]");
     const prefs = ["pref1", "pref2", "pref3"].map(v).filter(Boolean);
-    const lines = [
-      "היי מיכאל, אשמח לשיחת מיפוי של 15 דקות.",
-      "שם: " + v("name"),
-      v("business") && "עסק: " + v("business"),
-      "טלפון: " + v("phone"),
-      prefs.length && "זמנים נוחים: " + prefs.join(" / "),
-      v("pain") && "מה הכי גוזל זמן: " + v("pain"),
-    ].filter(Boolean);
-    window.location.href = "https://wa.me/" + wa + "?text=" + encodeURIComponent(lines.join("\n"));
+    const data = {
+      _subject: "ליד חדש מהאתר: " + v("name"),
+      _template: "table",
+      _captcha: "false",
+      "שם": v("name"),
+      "טלפון": v("phone"),
+      "מייל": v("email"),
+      "עסק": v("business") || "-",
+      "זמנים נוחים": prefs.join(" / ") || "-",
+      "מה הכי גוזל זמן": v("pain") || "-",
+      _replyto: v("email"),
+    };
+    btn.disabled = true; btn.textContent = "שולח...";
+    let ok = false;
+    try {
+      const r = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(data) });
+      const j = await r.json().catch(() => ({}));
+      ok = r.ok && String(j.success) === "true";
+    } catch {}
+    const waText = ["היי מיכאל, השארתי פרטים באתר לשיחת מיפוי.", "שם: " + v("name"), "טלפון: " + v("phone"), prefs.length && "זמנים נוחים: " + prefs.join(" / ")].filter(Boolean).join("\n");
+    const wa = "https://wa.me/" + waNumber + "?text=" + encodeURIComponent(waText);
+    const box = document.createElement("div");
+    box.className = "flex flex-col gap-4";
+    box.setAttribute("role", "status");
+    const h = document.createElement("h2"); h.className = "text-xl font-bold"; h.id = "lead-form-title";
+    const p = document.createElement("p");
+    const a = document.createElement("a"); a.className = "btn justify-center"; a.href = wa; a.target = "_blank"; a.rel = "noopener noreferrer";
+    const c = document.createElement("button"); c.type = "button"; c.className = "btn"; c.textContent = "סגירה";
+    c.addEventListener("click", () => f.closest("dialog").close());
+    if (ok) {
+      h.textContent = "תודה, קיבלתי.";
+      p.textContent = "אחזור אליכם תוך יום עסקים לתיאום השיחה.";
+      a.textContent = "רוצים לזרז? שלחו לי הודעה בוואטסאפ";
+    } else {
+      h.textContent = "השליחה לא הצליחה";
+      p.textContent = "אפשר לשלוח לי את הפרטים בוואטסאפ בלחיצה אחת:";
+      a.textContent = "שליחה בוואטסאפ";
+    }
+    box.append(h, p, a, c);
+    f.replaceWith(box);
   }));
 })();
