@@ -9,6 +9,7 @@
   // Every submission is emailed to Michael through FormSubmit (free, no server needed).
   const endpoint = "https://formsubmit.co/ajax/mikelgershman@gmail.com";
   const accessKey = "";
+  const viaScript = false;
   document.querySelectorAll("dialog form").forEach((f) => f.addEventListener("submit", async (e) => {
     e.preventDefault();
     const v = (n) => (f.elements[n] && f.elements[n].value || "").trim();
@@ -31,9 +32,15 @@
     btn.disabled = true; btn.textContent = "שולח...";
     let ok = false;
     try {
-      const r = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(data) });
+      // Apps Script: text/plain avoids a CORS preflight; it reads the JSON body itself.
+      const payload = viaScript
+        ? { name: v("name"), phone: v("phone"), email: v("email"), business: v("business"), prefs: prefs.join(" / "), pain: v("pain"), page: location.pathname, website: v("website") }
+        : data;
+      const r = await fetch(endpoint, viaScript
+        ? { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) }
+        : { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(payload) });
       const j = await r.json().catch(() => ({}));
-      ok = r.ok && String(j.success) === "true";
+      ok = r.ok && (viaScript ? j.ok === true : String(j.success) === "true");
     } catch {}
     const waText = ["היי מיכאל, השארתי פרטים באתר לשיחת מיפוי.", "שם: " + v("name"), "טלפון: " + v("phone"), prefs.length && "זמנים נוחים: " + prefs.join(" / ")].filter(Boolean).join("\n");
     const wa = "https://wa.me/" + waNumber + "?text=" + encodeURIComponent(waText);
