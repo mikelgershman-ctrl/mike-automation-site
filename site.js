@@ -8,6 +8,7 @@
   document.querySelectorAll("dialog button[aria-label='סגירה']").forEach((b) => b.addEventListener("click", () => b.closest("dialog").close()));
   // Every submission is emailed to Michael through FormSubmit (free, no server needed).
   const endpoint = "https://formsubmit.co/ajax/mikelgershman@gmail.com";
+  const accessKey = "";
   document.querySelectorAll("dialog form").forEach((f) => f.addEventListener("submit", async (e) => {
     e.preventDefault();
     const v = (n) => (f.elements[n] && f.elements[n].value || "").trim();
@@ -15,6 +16,7 @@
     const btn = f.querySelector("button[type=submit]");
     const prefs = ["pref1", "pref2", "pref3"].map(v).filter(Boolean);
     const data = {
+      ...(accessKey ? { access_key: accessKey, subject: "ליד חדש מהאתר: " + v("name"), from_name: "האתר של מייק אוטומציות", replyto: v("email"), botcheck: "" } : {}),
       _subject: "ליד חדש מהאתר: " + v("name"),
       _template: "table",
       _captcha: "false",
